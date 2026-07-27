@@ -14,7 +14,7 @@ published at
 | **1.0.1** | **Approved and published**, unlisted, 27 Jul 2026. This is what the store currently serves. |
 | **1.0.2** | **Submitted, awaiting review.** Toolbar popup, corrected store copy, em dashes removed. |
 | **1.0.3** | **Never built, never uploaded. Subsumed into 1.1.0** — do not look for it. Its multi-account work is in 1.1.0. |
-| **1.1.0** | **Code complete, tested end to end, zip built and waiting in the project root.** Multi-account support plus the paid gating feature. Do not upload until 1.0.2 clears. |
+| **1.1.0** | **Code complete, zip built and waiting in the project root.** Multi-account support, the paid gating feature, and the popup account picker. Do not upload until 1.0.2 clears. The first two were tested end to end against three live accounts; **the account picker has only been verified in a stubbed harness, not yet loaded unpacked in Chrome.** |
 
 > **If the dashboard disagrees about what's in review, believe the dashboard.**
 > The evidence here says 1.0.2: this file recorded it as submitted, and the
@@ -28,7 +28,7 @@ published version, which is why getting 1.0.1 approved untouched mattered.
 
 ## What 1.1.0 adds
 
-Two separate features landed together.
+Four separate changes landed together.
 
 ### 1. Multi-account support (was going to be 1.0.3)
 
@@ -96,6 +96,33 @@ listener registered first and calls `stopImmediatePropagation`, so it swallows
 the click before a new script sees it. The page genuinely has to reload.
 `showStale()` in `src/content/overlay.js` deliberately calls **no `chrome` API**,
 because it has to run when the extension is unreachable.
+
+### 4. Account picker in the toolbar popup
+
+Multi-account support made a single **Open Drive** button ambiguous: it always
+landed on whichever account Drive opened by default, with no way to say which
+one you meant. At **two or more** connected accounts the popup now replaces that
+button with one row per account, each showing the address, its `/u/N/` slot and
+a coloured initial. Clicking a row opens `drive.google.com/drive/u/N/`.
+
+- **At one account nothing changes.** One account is not a choice, so the single
+  button stays exactly as it was.
+- The slot map already existed (`getAccounts`, the same message the options page
+  uses), so this added **no permission, no scope and no API call**.
+- The `/u/N/` line under each address is deliberate. Chrome renumbers the slots
+  when accounts are added or removed there, so a row can briefly point at the
+  wrong Drive until that account is used once and `api-backend.js` repairs the
+  mapping. The slot is the one thing a user can check against Drive's own
+  address bar when that happens.
+- **No profile photos.** Reading those needs a scope this extension does not
+  ask for. The circle is the first letter on a colour chosen by slot index.
+
+**Height.** Chrome caps popups at **600px** and scrolls the whole popup past
+that, which would push Settings and the footer off the bottom. So the popup is a
+flex column with `max-height: 600px` and `#accountList` is the only child allowed
+to shrink. Measured: two accounts 411px, five 576px, six and up pinned at 600px
+with the list scrolling inside its own box. No row count is hardcoded anywhere,
+so this stays correct if the hint text or header ever changes.
 
 ---
 
