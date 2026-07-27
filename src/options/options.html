@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Drive Notes Options</title>
+    <style>
+      /* color-scheme also tells the browser to render form controls and
+         scrollbars in the matching theme. */
+      :root {
+        color-scheme: light dark;
+        --bg: #ffffff;
+        --fg: #1f1f1f;
+        --muted: #5f6368;
+        --border: #dadce0;
+        --field-border: #c4c7c5;
+        --field-bg: #ffffff;
+        --code-bg: #f1f3f4;
+        --accent: #0b57d0;
+        --on-accent: #ffffff;
+        --ok: #188038;
+        --error: #d93025;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #1f1f1f;
+          --fg: #e8eaed;
+          --muted: #9aa0a6;
+          --border: #3c4043;
+          --field-border: #5f6368;
+          --field-bg: #2d2e30;
+          --code-bg: #2d2e30;
+          --accent: #a8c7fa;
+          --on-accent: #062e6f;
+          --ok: #81c995;
+          --error: #f28b82;
+        }
+      }
+      body {
+        font: 14px/1.5 system-ui, sans-serif;
+        max-width: 620px;
+        margin: 0 auto;
+        padding: 32px 20px;
+        background: var(--bg);
+        color: var(--fg);
+      }
+      h1 { font-size: 20px; margin-bottom: 4px; }
+      .sub { color: var(--muted); margin-top: 0; }
+      a { color: var(--accent); }
+      fieldset {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        margin: 20px 0;
+        padding: 16px;
+      }
+      legend { font-weight: 600; padding: 0 6px; }
+      label { display: block; margin: 12px 0 4px; font-weight: 500; }
+      input[type='text'], select {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 8px;
+        border: 1px solid var(--field-border);
+        border-radius: 6px;
+        background: var(--field-bg);
+        color: var(--fg);
+        font: inherit;
+      }
+      input[type='text']:focus, select:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: -1px;
+      }
+      code {
+        background: var(--code-bg);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 13px;
+        word-break: break-all;
+      }
+      .hint { color: var(--muted); font-size: 12px; margin-top: 4px; }
+      button {
+        font: inherit;
+        padding: 8px 18px;
+        border-radius: 999px;
+        border: 1px solid transparent;
+        background: var(--accent);
+        color: var(--on-accent);
+        cursor: pointer;
+      }
+      button.secondary {
+        background: transparent;
+        color: var(--accent);
+        border-color: var(--field-border);
+      }
+      #status { margin-left: 12px; font-size: 13px; }
+      .ok { color: var(--ok); }
+      .error { color: var(--error); }
+      ol { padding-left: 20px; }
+      li { margin: 6px 0; }
+      .warn {
+        background: var(--code-bg);
+        border-radius: 8px;
+        padding: 12px;
+        font-size: 13px;
+        margin: 16px 0;
+      }
+      details {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 0 16px;
+        margin: 20px 0;
+      }
+      /* Collapsed, the summary alone is the whole box, so it needs its own
+         vertical padding; expanded, the content below supplies the bottom. */
+      details:not([open]) { padding-bottom: 0; }
+      details[open] { padding-bottom: 16px; }
+      summary {
+        cursor: pointer;
+        padding: 14px 0;
+        font-weight: 500;
+        color: var(--muted);
+      }
+      summary:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      .accounts { list-style: none; margin: 12px 0; padding: 0; }
+      .accounts li {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        margin: 0 0 8px;
+      }
+      .accounts .email { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+      .accounts .slot { color: var(--muted); font-size: 12px; }
+      .accounts button { padding: 4px 12px; font-size: 13px; }
+      /* Page-level, because Save covers every field on the page rather than
+         the section it used to sit in. */
+      .actions { margin: 24px 0 8px; }
+      .accounts .empty {
+        display: block;
+        border: 1px dashed var(--field-border);
+        color: var(--muted);
+        justify-content: flex-start;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Drive Notes</h1>
+    <p class="sub">Alt + right-click a Drive file or folder to edit its description.</p>
+
+    <fieldset>
+      <legend>Behaviour</legend>
+
+      <label for="modifier">Modifier key</label>
+      <select id="modifier">
+        <option value="alt">Alt + right-click</option>
+        <option value="ctrl">Ctrl + right-click</option>
+        <option value="shift">Shift + right-click</option>
+      </select>
+      <p class="hint">
+        Held while right-clicking. Drive draws its own context menu, so a plain
+        right-click can't be extended, so the modifier is what lets us take over.
+      </p>
+
+      <label for="mode">When an item already has a description</label>
+      <select id="mode">
+        <option value="continue">Continue the existing text</option>
+        <option value="newline">Start a new line</option>
+        <option value="dated">Start a dated entry</option>
+      </select>
+      <p class="hint">
+        The existing description always loads into the box with the cursor at
+        the very end, ready to type. This only controls what gets pre-typed for
+        you first: nothing, a line break, or a blank line plus today's date.
+      </p>
+
+      <label for="debug">
+        <input type="checkbox" id="debug" /> Verbose console logging
+      </label>
+    </fieldset>
+
+    <fieldset id="planBox" hidden>
+      <legend>Plan</legend>
+
+      <p id="planSummary" style="margin-top: 0"></p>
+      <p class="hint" id="planDetail"></p>
+
+      <p class="actions" style="margin-bottom: 0">
+        <button id="unlock" hidden>Unlock</button>
+        <button id="restore" class="secondary">Already paid? Restore</button>
+      </p>
+    </fieldset>
+
+    <fieldset>
+      <legend>Google account</legend>
+
+      <p class="hint" style="margin-top: 0">
+        Nothing to set up. Each Google account is authorized on its own, the
+        first time you edit a description in one of its Drive tabs, and appears
+        here once it has been. If you're signed into several accounts, the
+        extension follows whichever one the tab belongs to.
+      </p>
+
+      <p class="warn">
+        The first time in each account, Google shows a
+        <strong>“Google hasn’t verified this app”</strong> screen. That’s
+        expected: this extension talks to your Drive directly from your browser
+        and hasn’t been through Google’s paid verification review. Choose
+        <em>Advanced → Go to File Notes</em> to continue.
+      </p>
+
+      <ul id="accounts" class="accounts"></ul>
+
+      <p class="hint">
+        Disconnecting forgets an account here. To withdraw the access grant
+        itself, use your
+        <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">Google account permissions</a> page.
+      </p>
+    </fieldset>
+
+    <details>
+      <summary>Advanced: use your own OAuth client</summary>
+
+      <p class="hint">
+        Optional, and almost nobody needs this. The extension ships with a
+        working OAuth client. Supply your own only if you'd rather the Drive
+        requests ran under a Google Cloud project you control, for example
+        because your workplace restricts third-party apps.
+      </p>
+
+      <ol>
+        <li>Open the <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Google Cloud credentials page</a> and create a project.</li>
+        <li>Enable the <strong>Google Drive API</strong> for it.</li>
+        <li>Configure the OAuth consent screen: <em>External</em>, publishing status <strong>In production</strong>. Add the scope <code>.../auth/drive.metadata</code>.</li>
+        <li>Create an OAuth client ID of type <strong>Web application</strong>.</li>
+        <li>Add this exact <strong>Authorised redirect URI</strong>:<br /><code id="redirect">loading…</code></li>
+        <li>Paste the client ID below and press Save.</li>
+      </ol>
+
+      <label for="clientId">OAuth client ID</label>
+      <input type="text" id="clientId" placeholder="Leave blank to use the built-in client" />
+      <p class="hint">
+        Stored only in your browser profile. Clearing this field restores the
+        built-in client. Either way, saving a change here disconnects every
+        account above; they re-authorize the next time you use them.
+      </p>
+    </details>
+
+    <p class="actions">
+      <button id="save">Save</button>
+      <span id="status"></span>
+    </p>
+
+    <script src="options.js"></script>
+  </body>
+</html>

@@ -1,0 +1,51 @@
+{
+  "manifest_version": 3,
+  "name": "File Notes for Google Drive",
+  "version": "1.1.0",
+  "description": "Alt + right-click to edit any Drive file or folder's built-in description. Searchable notes and tags, filenames stay clean.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_title": "File Notes for Google Drive",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "permissions": ["storage", "identity"],
+  "host_permissions": [
+    "https://www.googleapis.com/*",
+    "https://raw.githubusercontent.com/*",
+    "https://extensionpay.com/*"
+  ],
+  "background": {
+    "service_worker": "src/background/service-worker.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://drive.google.com/*"],
+      "js": [
+        "src/content/config.js",
+        "src/content/resolver.js",
+        "src/content/overlay.js",
+        "src/content/content.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": false
+    },
+    {
+      "matches": ["https://extensionpay.com/*"],
+      "js": ["src/vendor/ExtPay.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "options_page": "src/options/options.html"
+}

@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>File Notes — gating control</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #ffffff;
+        --fg: #1f1f1f;
+        --muted: #5f6368;
+        --border: #dadce0;
+        --field-border: #c4c7c5;
+        --field-bg: #ffffff;
+        --code-bg: #f1f3f4;
+        --accent: #0b57d0;
+        --on-accent: #ffffff;
+        --ok: #188038;
+        --error: #d93025;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #1f1f1f;
+          --fg: #e8eaed;
+          --muted: #9aa0a6;
+          --border: #3c4043;
+          --field-border: #5f6368;
+          --field-bg: #2d2e30;
+          --code-bg: #2d2e30;
+          --accent: #a8c7fa;
+          --on-accent: #062e6f;
+          --ok: #81c995;
+          --error: #f28b82;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        font: 14px/1.5 system-ui, sans-serif;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 32px 20px 64px;
+        background: var(--bg);
+        color: var(--fg);
+      }
+      h1 { font-size: 20px; margin-bottom: 4px; }
+      .sub { color: var(--muted); margin-top: 0; }
+      .cols { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; }
+      .cols > * { flex: 1 1 380px; min-width: 300px; }
+      fieldset {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        margin: 20px 0;
+        padding: 16px;
+      }
+      legend { font-weight: 600; padding: 0 6px; }
+      label { display: block; margin: 14px 0 4px; font-weight: 500; }
+      label:first-of-type { margin-top: 0; }
+      input[type='text'], input[type='number'], textarea {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid var(--field-border);
+        border-radius: 6px;
+        background: var(--field-bg);
+        color: var(--fg);
+        font: inherit;
+      }
+      textarea { min-height: 76px; resize: vertical; }
+      input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+      .check { display: flex; align-items: flex-start; gap: 8px; font-weight: 500; }
+      .check input { margin-top: 3px; }
+      .hint { color: var(--muted); font-size: 12px; margin: 4px 0 0; }
+      button {
+        font: inherit;
+        padding: 8px 18px;
+        border-radius: 999px;
+        border: 1px solid transparent;
+        background: var(--accent);
+        color: var(--on-accent);
+        cursor: pointer;
+      }
+      button.secondary {
+        background: transparent;
+        color: var(--accent);
+        border-color: var(--field-border);
+      }
+      .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 16px 0 0; }
+      #msg { font-size: 13px; }
+      .ok { color: var(--ok); }
+      .error { color: var(--error); }
+      pre {
+        background: var(--code-bg);
+        padding: 12px;
+        border-radius: 8px;
+        overflow-x: auto;
+        font-size: 12.5px;
+        margin: 0;
+      }
+      code { background: var(--code-bg); padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+      .warn {
+        background: var(--code-bg);
+        border-left: 3px solid var(--accent);
+        border-radius: 4px;
+        padding: 12px;
+        font-size: 13px;
+        margin: 16px 0;
+      }
+
+      /* A copy of the note box's own styles, close enough to judge the copy by.
+         Not shared with the extension: this file has to open from file:// with
+         nothing installed, so a duplicated 30 lines beats a build step. */
+      .preview-frame {
+        background: #eef0f3;
+        border-radius: 10px;
+        padding: 24px;
+        display: flex;
+        justify-content: center;
+      }
+      @media (prefers-color-scheme: dark) { .preview-frame { background: #101010; } }
+      .box {
+        width: 340px;
+        padding: 12px;
+        border-radius: 10px;
+        background: #ffffff;
+        color: #1f1f1f;
+        border: 1px solid rgba(0, 0, 0, 0.15);
+        box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
+        font: 13px/1.45 "Google Sans", Roboto, system-ui, sans-serif;
+      }
+      @media (prefers-color-scheme: dark) {
+        .box { background: #1f1f1f; color: #e8eaed; border-color: rgba(255,255,255,0.16); }
+      }
+      .box .product { font-size: 11px; opacity: 0.6; margin-bottom: 2px; }
+      .box .title { font-weight: 500; margin-bottom: 8px; }
+      .box .body { margin: 0 0 10px; font-size: 12.5px; opacity: 0.85; }
+      .box .unlock {
+        width: 100%;
+        background: #0b57d0;
+        color: #fff;
+        border: 0;
+        border-radius: 999px;
+        padding: 6px 14px;
+        font: inherit;
+        cursor: default;
+      }
+      .box .note { font-size: 11px; opacity: 0.6; margin: 8px 0 0; }
+      .box .row { display: flex; gap: 8px; margin-top: 8px; justify-content: flex-end; }
+      .box .cancel {
+        background: transparent;
+        color: inherit;
+        border: 1px solid #c4c7c5;
+        border-radius: 999px;
+        padding: 6px 14px;
+        font: inherit;
+      }
+      .off { opacity: 0.45; }
+    </style>
+  </head>
+  <body>
+    <h1>Gating control</h1>
+    <p class="sub">
+      Edits the rules every installed copy of File Notes follows. Changes reach
+      users within 24 hours of publishing, with no Chrome Web Store review.
+    </p>
+
+    <label for="sourceUrl">Config URL</label>
+    <input type="text" id="sourceUrl" spellcheck="false" />
+    <p class="hint">
+      Where the extension reads from. Must match <code>CONFIG_URL</code> in
+      <code>src/background/licensing.js</code>. Load pulls the live file so you
+      can see what users are actually on right now.
+    </p>
+    <div class="actions">
+      <button id="load" class="secondary">Load live config</button>
+      <span id="loadMsg"></span>
+    </div>
+
+    <div class="cols">
+      <div>
+        <fieldset>
+          <legend>Rules</legend>
+
+          <label class="check">
+            <input type="checkbox" id="gateEnabled" />
+            <span>Charge for extra accounts</span>
+          </label>
+          <p class="hint">
+            Unticked is the kill switch: every install goes fully free at the
+            next refresh. Use it if the gate ever misfires, rather than waiting
+            on a store review.
+          </p>
+
+          <label for="freeAccountLimit">Free accounts</label>
+          <input type="number" id="freeAccountLimit" min="1" max="99" />
+          <p class="hint">
+            How many Google accounts work without paying. The prompt appears
+            when someone alt + right-clicks in one past this number.
+          </p>
+
+          <label for="priceLabel">Price label</label>
+          <input type="text" id="priceLabel" maxlength="20" />
+          <p class="hint">
+            Display only. The amount actually charged lives in Stripe, so change
+            it in both places or the button will lie.
+          </p>
+
+          <label for="checkoutUrl">Checkout URL override</label>
+          <input type="text" id="checkoutUrl" spellcheck="false" placeholder="Empty = use ExtensionPay" />
+          <p class="hint">
+            Leave empty and payments go through ExtensionPay's own page. Fill it
+            in (https only) to send people somewhere else instead, which is how
+            you'd move to your own payment server later without a release.
+          </p>
+        </fieldset>
+
+        <fieldset>
+          <legend>Wording</legend>
+          <label for="upgradeHeadline">Headline</label>
+          <input type="text" id="upgradeHeadline" maxlength="120" />
+
+          <label for="upgradeBody">Body</label>
+          <textarea id="upgradeBody" maxlength="300"></textarea>
+          <p class="hint">Both appear in the note box, capped at 300 characters.</p>
+        </fieldset>
+      </div>
+
+      <div>
+        <fieldset>
+          <legend>What users will see</legend>
+          <div class="preview-frame">
+            <div class="box" id="preview">
+              <div class="product">File Notes for Google Drive</div>
+              <div class="title" id="pvTitle"></div>
+              <p class="body" id="pvBody"></p>
+              <button class="unlock" id="pvButton" type="button"></button>
+              <p class="note">Pay once, not per account. Unlocks unlimited Google accounts.</p>
+              <div class="row"><button class="cancel" type="button">Cancel</button></div>
+            </div>
+          </div>
+          <p class="hint" id="pvNote"></p>
+        </fieldset>
+
+        <fieldset>
+          <legend>Publish</legend>
+          <pre id="output"></pre>
+          <div class="actions">
+            <button id="copy">Copy JSON</button>
+            <button id="download" class="secondary">Download gating.json</button>
+            <span id="msg"></span>
+          </div>
+          <p class="hint">
+            Save it over <code>admin/gating.json</code>, then run
+            <code>admin/publish.ps1</code> to push it live.
+          </p>
+        </fieldset>
+      </div>
+    </div>
+
+    <div class="warn">
+      <strong>Two things this cannot do.</strong> It cannot change the amount
+      Stripe charges, and it cannot reach anyone whose browser has not refreshed
+      in the last 24 hours. For anything urgent, the kill switch is still the
+      fastest lever you have.
+    </div>
+
+    <script src="config-editor.js"></script>
+  </body>
+</html>

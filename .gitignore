@@ -1,0 +1,13 @@
+# Build artifacts. The zips are what gets uploaded to the Chrome Web Store, and
+# they are regenerated from this tree, so git has nothing to gain by storing
+# binaries of its own contents.
+*.zip
+
+# Signing key. Never commit this: it is what proves an update is genuinely from
+# you, and there is no way to rotate it without orphaning every install.
+*.pem
+*.key
+*.p12
+
+# Local tool settings, specific to one machine.
+.claude/

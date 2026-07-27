@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>File Notes</title>
+    <style>
+      /* Same palette as the options page — keep the two in step. */
+      :root {
+        color-scheme: light dark;
+        --bg: #ffffff;
+        --fg: #1f1f1f;
+        --muted: #5f6368;
+        --border: #dadce0;
+        --field-border: #c4c7c5;
+        --card-bg: #f1f3f4;
+        --foot-bg: #fafafa;
+        --chip-bg: #ffffff;
+        --icon-bg: #e8f0fe;
+        --accent: #0b57d0;
+        --on-accent: #ffffff;
+        --ok: #188038;
+        --pending: #b06000;
+        --error: #d93025;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #1f1f1f;
+          --fg: #e8eaed;
+          --muted: #9aa0a6;
+          --border: #3c4043;
+          --field-border: #5f6368;
+          --card-bg: #2d2e30;
+          --foot-bg: #252525;
+          --chip-bg: #1f1f1f;
+          --icon-bg: #2d3f5f;
+          --accent: #a8c7fa;
+          --on-accent: #062e6f;
+          --ok: #81c995;
+          --pending: #fdd663;
+          --error: #f28b82;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        width: 300px;
+        margin: 0;
+        font: 13px/1.5 system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--fg);
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 16px 12px;
+      }
+      header img {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        background: var(--icon-bg);
+        padding: 3px;
+      }
+      .titles { flex: 1; min-width: 0; }
+      .titles b { display: block; font-size: 14px; font-weight: 500; }
+      .titles span, #version { font-size: 11px; color: var(--muted); }
+
+      #statusRow {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 0 16px 12px;
+        font-size: 12px;
+      }
+      #dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--muted);
+        flex: none;
+      }
+      #statusRow.ok #dot { background: var(--ok); }
+      #statusRow.ok #statusText { color: var(--ok); }
+      #statusRow.pending #dot { background: var(--pending); }
+      #statusRow.pending #statusText { color: var(--pending); }
+      #statusRow.error #dot { background: var(--error); }
+      #statusRow.error #statusText { color: var(--error); }
+      #account {
+        color: var(--muted);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      #hint {
+        margin: 0 16px 14px;
+        padding: 12px;
+        background: var(--card-bg);
+        border-radius: 8px;
+      }
+      kbd {
+        display: inline-block;
+        padding: 1px 6px;
+        background: var(--chip-bg);
+        border: 1px solid var(--field-border);
+        border-radius: 4px;
+        font: inherit;
+        font-size: 12px;
+      }
+
+      .actions { display: flex; gap: 8px; padding: 0 16px 14px; }
+      button {
+        flex: 1;
+        padding: 8px 0;
+        border-radius: 999px;
+        border: 1px solid transparent;
+        background: var(--accent);
+        color: var(--on-accent);
+        font: inherit;
+        cursor: pointer;
+      }
+      button.secondary {
+        background: transparent;
+        color: var(--accent);
+        border-color: var(--field-border);
+      }
+      button:disabled { opacity: 0.6; cursor: default; }
+      button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      footer {
+        display: flex;
+        gap: 14px;
+        padding: 10px 16px;
+        border-top: 1px solid var(--border);
+        background: var(--foot-bg);
+      }
+      footer a { font-size: 11px; color: var(--accent); text-decoration: none; }
+      footer a:hover { text-decoration: underline; }
+      footer a.last { margin-left: auto; }
+      footer:empty { display: none; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <img src="../../icons/icon32.png" alt="" />
+      <div class="titles">
+        <b>File notes</b>
+        <span>for Google Drive</span>
+      </div>
+      <span id="version"></span>
+    </header>
+
+    <div id="statusRow">
+      <span id="dot"></span>
+      <span id="statusText">Checking…</span>
+      <span id="account"></span>
+    </div>
+
+    <p id="hint">Loading…</p>
+
+    <div class="actions">
+      <button id="primary">Open Drive</button>
+      <button id="settings" class="secondary">Settings</button>
+    </div>
+
+    <footer id="links"></footer>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
