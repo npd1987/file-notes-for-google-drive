@@ -14,7 +14,8 @@ published at
 | **1.0.1** | **Approved and published**, unlisted, 27 Jul 2026. This is what the store currently serves. |
 | **1.0.2** | **Abandoned.** Its review was cancelled on 27 Jul 2026 rather than waited out, and it will never be submitted. Everything it contained is in 1.1.0. |
 | **1.0.3** | **Never built, never uploaded. Subsumed into 1.1.0** — do not look for it. Its multi-account work is in 1.1.0. |
-| **1.1.0** | **Uploaded as the draft package, listing and privacy fields filled in, awaiting Submit.** Multi-account support, the paid gating feature, the popup account picker and the keystroke fix. |
+| **1.1.0** | **Submitted, awaiting review**, 27 Jul 2026. Multi-account support, the paid gating feature, the popup account picker and the keystroke fix. The paywall was switched on in the published config before submitting, so the listing and the extension agree. |
+| **1.1.1** | **Unreleased, sitting on `main`.** One fix so far: the options page Plan box now reports next to its own buttons. **`main` is ahead of the submitted package.** Do not rebuild `file-notes-v1.1.0.zip` while 1.1.0 is in review; the zip in the project root is the one that was uploaded and should stay that way. Bump `manifest.json` to 1.1.1 when you next build. |
 
 ### Cancelling a review is a supported move
 

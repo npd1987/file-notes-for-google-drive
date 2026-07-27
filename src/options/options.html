@@ -90,7 +90,7 @@
         color: var(--accent);
         border-color: var(--field-border);
       }
-      #status { margin-left: 12px; font-size: 13px; }
+      #status, #planStatus { margin-left: 12px; font-size: 13px; }
       .ok { color: var(--ok); }
       .error { color: var(--error); }
       ol { padding-left: 20px; }
@@ -190,6 +190,11 @@
       <p class="actions" style="margin-bottom: 0">
         <button id="unlock" hidden>Unlock</button>
         <button id="restore" class="secondary">Already paid? Restore</button>
+        <!-- Restore reports here rather than in the page-wide #status by the
+             Save button. Someone who paid on another machine presses this,
+             sees nothing happen where they are looking, and concludes their
+             purchase is lost. -->
+        <span id="planStatus"></span>
       </p>
     </fieldset>
 

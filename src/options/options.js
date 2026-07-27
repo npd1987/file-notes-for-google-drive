@@ -12,6 +12,7 @@ const plan = {
   detail: document.getElementById('planDetail'),
   unlock: document.getElementById('unlock'),
   restore: document.getElementById('restore'),
+  status: document.getElementById('planStatus'),
 };
 
 // Guarded: outside a real extension context (e.g. previewing this file
@@ -145,22 +146,43 @@ async function renderPlan(fromResponse) {
   plan.restore.hidden = false;
 }
 
+// The plan box reports next to its own buttons rather than in #status, which
+// sits at the far bottom of the page beside Save. Restore's whole purpose is to
+// answer someone who paid on another machine and is worried the purchase is
+// lost; writing that answer offscreen, then wiping it after two seconds, reads
+// as a dead button and sends them to support instead.
+let planStatusTimer;
+
+function setPlanStatus(message, kind = '', clearAfter = 0) {
+  clearTimeout(planStatusTimer);
+  plan.status.textContent = message;
+  plan.status.className = kind;
+  if (clearAfter) planStatusTimer = setTimeout(() => setPlanStatus(''), clearAfter);
+}
+
 plan.unlock.addEventListener('click', async () => {
   const response = await chrome.runtime.sendMessage({ type: 'openCheckout' }).catch(() => null);
-  if (!response?.ok) setStatus(response?.error || "Couldn't open checkout", 'error');
+  if (!response?.ok) setPlanStatus(response?.error || "Couldn't open checkout", 'error');
 });
 
 plan.restore.addEventListener('click', async () => {
   plan.restore.disabled = true;
-  setStatus('Checking…');
+  setPlanStatus('Checking…');
   const response = await chrome.runtime
     .sendMessage({ type: 'refreshLicense' })
     .catch(() => null);
   plan.restore.disabled = false;
 
   await renderPlan(response);
-  setStatus(response?.plan?.paid ? 'Unlocked' : 'No payment found for this browser', response?.plan?.paid ? 'ok' : '');
-  statusTimer = setTimeout(() => setStatus(''), 2500);
+
+  // The success case clears quickly because the box itself visibly changes to
+  // unlocked. The "nothing found" case is the one someone needs time to read,
+  // so it lingers.
+  if (response?.plan?.paid) {
+    setPlanStatus('Unlocked', 'ok', 2500);
+  } else {
+    setPlanStatus('No payment found for this browser', '', 8000);
+  }
 });
 
 async function save() {
