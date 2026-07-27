@@ -103,6 +103,45 @@ let host = null;
 let shadow = null;
 let activeHandle = null;
 
+// Drive binds single keys as global shortcuts, and its listeners sit on the
+// document. Our box lives in a CLOSED shadow root, so by the time an event
+// reaches those listeners it has been retargeted to the host <div> and Drive's
+// "is the user typing in a field?" check no longer sees a textarea. It treats
+// the keystroke as a shortcut, and for any key where that means preventDefault,
+// the character is never typed at all. An apostrophe was one of them.
+//
+// Stopping the event on the box itself is too late: that is the bubble phase,
+// and anything Drive registered in the CAPTURE phase has already run. So this
+// sits on `window` in the capture phase, which is the first node in the path,
+// and is registered at document_start so it is ahead of the page's own scripts.
+//
+// stopPropagation does NOT cancel the default action, so the character still
+// lands in the textarea and Enter still inserts a newline. It only means Drive
+// never hears the keystroke.
+function onKeyCapture(event) {
+  if (!host || !activeHandle) return;
+  // composedPath() truncates at the host for a closed root, which is exactly
+  // the node being tested for, so this works without opening the shadow tree.
+  if (!event.composedPath().includes(host)) return;
+
+  event.stopPropagation();
+  if (event.type !== 'keydown') return;
+
+  if (event.key === 'Escape') {
+    activeHandle.close();
+  } else if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+    event.preventDefault();
+    activeHandle.commit();
+  }
+}
+
+// Registered once, at load, rather than per-open: capture listeners on the same
+// node fire in registration order, and the only way to be certain of running
+// before Drive's is to be attached before Drive's scripts run at all.
+for (const type of ['keydown', 'keypress', 'keyup']) {
+  window.addEventListener(type, onKeyCapture, true);
+}
+
 function build() {
   host = document.createElement('div');
   host.setAttribute('data-drive-notes', '');
@@ -188,6 +227,9 @@ DriveNotes.openOverlay = function ({ x, y, title, onSave }) {
   position(box, x, y);
 
   const handle = {
+    // Hoisted; declared below. Exposed so the window-level key listener can
+    // reach the current box's save without holding a second reference to it.
+    commit: (...args) => commit(...args),
     setTitle: (t) => {
       titleEl.textContent = t;
     },
@@ -284,19 +326,9 @@ DriveNotes.openOverlay = function ({ x, y, title, onSave }) {
 
   saveBtn.onclick = commit;
   cancelBtn.onclick = handle.close;
-  box.onkeydown = (e) => {
-    // Drive binds single letters as global shortcuts (n, r, d, …). Every key
-    // event from this box must be stopped or typing a note fires them.
-    e.stopPropagation();
-    if (e.key === 'Escape') {
-      handle.close();
-    } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-      e.preventDefault();
-      commit();
-    }
-  };
-  box.onkeyup = (e) => e.stopPropagation();
-  box.onkeypress = (e) => e.stopPropagation();
+  // Keyboard handling lives in onKeyCapture at the top of this file, on window
+  // in the capture phase. Nothing can be bound to the box itself: the capture
+  // listener stops propagation before the event ever gets down here.
 
   document.addEventListener('mousedown', onOutside, true);
   activeHandle = handle;

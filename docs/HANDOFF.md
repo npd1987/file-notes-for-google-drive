@@ -28,7 +28,7 @@ published version, which is why getting 1.0.1 approved untouched mattered.
 
 ## What 1.1.0 adds
 
-Four separate changes landed together.
+Five separate changes landed together.
 
 ### 1. Multi-account support (was going to be 1.0.3)
 
@@ -97,7 +97,37 @@ the click before a new script sees it. The page genuinely has to reload.
 `showStale()` in `src/content/overlay.js` deliberately calls **no `chrome` API**,
 because it has to run when the extension is unreachable.
 
-### 4. Account picker in the toolbar popup
+### 4. Drive swallowing keystrokes in the note box
+
+Reported symptom: an apostrophe could not be typed into a note, while the same
+character went into Drive's own description field fine.
+
+Cause: the box lives in a **closed shadow root**, so by the time a keystroke
+reaches Drive's document-level listeners it has been retargeted to the host
+`<div>`. Drive's "is the user typing in a field?" check no longer sees a
+textarea, so it treats the keystroke as a shortcut, and for any key where that
+means `preventDefault()` the character is never typed.
+
+The old guard stopped the event on the box itself, which is the **bubble**
+phase. Anything Drive registered in the **capture** phase had already run.
+`onKeyCapture` now sits on `window` in the capture phase, the first node in the
+propagation path, registered at load so it is ahead of the page's own scripts.
+`stopPropagation` does not cancel the default action, so the character still
+lands in the textarea; Drive simply never hears the keystroke. Escape and
+Ctrl+Enter moved into that same listener, because nothing bound to the box can
+fire any more.
+
+**Confirmed fixed against live Drive on 27 Jul 2026.** The mechanism was first
+proven in a rig: a stand-in capture listener that cancels a key reproduces the
+symptom exactly, and the fix clears it, the key types and the stand-in never
+runs. The apostrophe was then verified by hand in Drive itself.
+
+Nothing on the save path was ever the problem: there is no sanitizing anywhere,
+and `JSON.stringify` encodes an apostrophe correctly. Worth remembering next
+time a character goes missing, the suspicion belongs on the page's key handling,
+not on the note text.
+
+### 5. Account picker in the toolbar popup
 
 Multi-account support made a single **Open Drive** button ambiguous: it always
 landed on whichever account Drive opened by default, with no way to say which
