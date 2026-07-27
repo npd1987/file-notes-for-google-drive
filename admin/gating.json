@@ -1,5 +1,5 @@
 {
-  "gateEnabled": false,
+  "gateEnabled": true,
   "freeAccountLimit": 1,
   "priceLabel": "$2",
   "checkoutUrl": "",

@@ -57,6 +57,14 @@ USE CASES
 • Folder notes: what a project folder is for, and what state it's in.
 • A running log: dated-entry mode adds to the note instead of replacing it.
 
+MULTIPLE GOOGLE ACCOUNTS
+
+If you have more than one Google account signed into Chrome, File Notes works in all of them. It reads which account a Drive tab belongs to and edits that account's file, so notes taken in a work tab and a personal tab each save where they should.
+
+The toolbar icon lists every account you have connected and opens the right Drive in one click, so you always know which one you're heading into.
+
+One Google account is free. Connecting more is a one-time payment that unlocks unlimited accounts, with no subscription and nothing to renew. It travels with your Chrome profile, so signing into Chrome on another computer carries it across. If you were already using several accounts before this became a paid feature, they stay unlocked.
+
 FEATURES
 
 • Alt + right-click any file or folder (configurable to Ctrl or Shift)
@@ -65,11 +73,15 @@ FEATURES
 • Three modes: continue the text, start a new line, or start a dated entry
 • Ctrl+Enter to save, Esc to cancel
 • Works on folders as well as files
+• Works across every Google account signed into Chrome
+• Account picker in the toolbar popup, so the right Drive is one click away
 • Dictate with your operating system's voice typing, since the box is a normal text field
 
 PRIVACY
 
-No server. No analytics. No tracking. Your notes go directly from your browser to your own Google Drive and nowhere else. The extension cannot read your file contents, only names and descriptions.
+No analytics. No tracking. No account to create. Your notes go directly from your browser to your own Google Drive and nowhere else. The extension cannot read your file contents, only names and descriptions.
+
+The only other request it makes is a small settings file it checks once a day, which sends nothing about you and nothing about your files.
 
 Your plain right-click is untouched. Drive's own menu works exactly as before.
 ```
@@ -77,6 +89,19 @@ Your plain right-click is untouched. Drive's own menu works exactly as before.
 > Changed after 1.0.1 — the USE CASES section is new. Listing fields carry over
 > between versions untouched, so **re-paste this field when submitting 1.0.2**
 > or the old description stays live.
+>
+> Changed again for 1.1.0, and **pasted into the dashboard on 27 Jul 2026**. The
+> MULTIPLE GOOGLE ACCOUNTS section and two FEATURES bullets are new.
+>
+> **"No server" was removed from PRIVACY and it must not come back.** As of
+> 1.1.0 the extension fetches a config file from `raw.githubusercontent.com`
+> and ships a content script for `extensionpay.com`. Both are visible to a
+> reviewer as host permissions, and a listing claiming no server contradicts
+> them.
+>
+> **The price is deliberately not named.** `priceLabel` is remote config and can
+> change without a review; a number written here would need a fresh review to
+> correct. Say "a one-time payment" and let the button carry the amount.
 
 ### Category
 
@@ -125,7 +150,7 @@ File Notes for Google Drive lets a user add or edit the description field on the
 **`storage`**
 
 ```
-Stores the user's preferences locally, such as the modifier key and note mode. If the user chooses to supply their own OAuth client ID under Advanced settings, that is stored too. It also records the email address of each Google account the user authorizes, so that renewing an expired access token can name the right account instead of interrupting the user with an account chooser; those addresses are read from the Drive API using the access token the user just granted, and are shown back to the user on the options page. Short-lived access tokens are cached in session storage so the user is not asked to re-authorize every few minutes. No data is transmitted anywhere by this permission.
+Stores the user's preferences locally, such as the modifier key and note mode. If the user chooses to supply their own OAuth client ID under Advanced settings, that is stored too. It also records the email address of each Google account the user authorizes, so that renewing an expired access token can name the right account instead of interrupting the user with an account chooser; those addresses are read from the Drive API using the access token the user just granted, and are shown back to the user on the options page and in the extension's toolbar popup. Short-lived access tokens are cached in session storage so the user is not asked to re-authorize every few minutes. The extension's own downloaded configuration file and a single flag recording whether this browser has purchased the multi-account unlock are cached here as well. No data is transmitted anywhere by this permission.
 ```
 
 > Changed after 1.0.1. The version submitted with 1.0.1 said "their OAuth
@@ -141,17 +166,32 @@ Stores the user's preferences locally, such as the modifier key and note mode. I
 Required to obtain an OAuth access token so the extension can read and write the description field via the Google Drive API. The user authorizes their own Google account directly with Google; the extension never handles credentials.
 ```
 
-**Host permission — `https://www.googleapis.com/*`**
+**Host permissions — ALL HOSTS GO IN ONE FIELD**
+
+> ⚠️ Two traps in this one field, both hit during the 1.1.0 submission.
+>
+> **It is ONE field for every host.** `storage` and `identity` get a box each,
+> but all hosts share a single "host permission justification" field. Do not go
+> looking for four separate boxes; they do not exist.
+>
+> **It is capped at 1000 characters.** The block below is 983. There is no room
+> to describe each host at length, so every sentence in it is load-bearing.
+> `storage` has the same cap and sits at 893.
 
 ```
-The extension calls the Google Drive API at this host to read the current description of the item the user selected, and to save the user's edited description. This is the only remote host the extension sends requests to, aside from Google's own sign-in endpoint.
+Four hosts, one job each.
+
+drive.google.com: the interface. A content script handles Alt + right-click on a file or folder, identifies the item, and shows the note box. It reads only the item's file ID and which account the tab uses.
+
+www.googleapis.com: the Drive API. Reads the item's current description, saves the edited one, and confirms which account a token belongs to. The only host any file data touches.
+
+raw.githubusercontent.com: one small static JSON settings file from the developer, holding whether multi-account is free or paid, the free limit, and the upgrade prompt wording, so these can be corrected without a new version. Unauthenticated GET, at most once a day, sending no user data or identifiers. Configuration values only, never evaluated as code.
+
+extensionpay.com: payment for the optional one-time multi-account unlock. The ExtensionPay library is bundled, not loaded remotely; a content script here reports a completed payment back. No Drive data is sent.
 ```
 
-**Content script — `https://drive.google.com/*`**
-
-```
-The extension's entire interface lives inside Google Drive. The content script listens for Alt + right-click on a file or folder row, identifies which item was clicked, and renders the note box at the cursor. It runs only on drive.google.com and reads nothing beyond the clicked item's file ID.
-```
+> The last two hosts are new in 1.1.0. The first two are compressed from the
+> 1.0.1 submission, which described them in separate fields at greater length.
 
 **Remote code**
 
@@ -159,8 +199,13 @@ The extension's entire interface lives inside Google Drive. The content script l
 No, I am not using remote code
 ```
 
-All JavaScript is bundled in the package. Nothing is fetched or evaluated at
-runtime.
+All JavaScript is bundled in the package, including the ExtensionPay library at
+`src/vendor/ExtPay.js`. The only file fetched at runtime is the JSON
+configuration described above, which is parsed as data and never evaluated.
+Expect a reviewer to probe this, since a fetch from a code-hosting domain looks
+like remote code at a glance. The distinction that matters: `gating.json` holds
+six values, all of them booleans, numbers or display strings, and `licensing.js`
+runs every one of them through `sanitize()` before use.
 
 ### Data usage — declare NO collection
 

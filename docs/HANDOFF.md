@@ -12,14 +12,20 @@ published at
 | Version | State |
 |---|---|
 | **1.0.1** | **Approved and published**, unlisted, 27 Jul 2026. This is what the store currently serves. |
-| **1.0.2** | **Submitted, awaiting review.** Toolbar popup, corrected store copy, em dashes removed. |
+| **1.0.2** | **Abandoned.** Its review was cancelled on 27 Jul 2026 rather than waited out, and it will never be submitted. Everything it contained is in 1.1.0. |
 | **1.0.3** | **Never built, never uploaded. Subsumed into 1.1.0** — do not look for it. Its multi-account work is in 1.1.0. |
-| **1.1.0** | **Code complete, zip built and waiting in the project root.** Multi-account support, the paid gating feature, and the popup account picker. Do not upload until 1.0.2 clears. The first two were tested end to end against three live accounts; **the account picker has only been verified in a stubbed harness, not yet loaded unpacked in Chrome.** |
+| **1.1.0** | **Uploaded as the draft package, listing and privacy fields filled in, awaiting Submit.** Multi-account support, the paid gating feature, the popup account picker and the keystroke fix. |
 
-> **If the dashboard disagrees about what's in review, believe the dashboard.**
-> The evidence here says 1.0.2: this file recorded it as submitted, and the
-> archived zips in `old versions/` stop at 1.0.2 with no 1.0.3 package ever
-> built. Either way 1.1.0 is higher than both, so nothing is blocked.
+### Cancelling a review is a supported move
+
+1.0.2 sat in review holding up 1.1.0, so it was cancelled: **⋮ menu on the Store
+listing page → Cancel review**, which returns the item to draft and re-enables
+"Upload new package". Up to six cancellations per publisher per day.
+
+Two neighbouring menu items do something entirely different and neither is what
+you want: **Roll back version** republishes an older build to installed users,
+and **Unpublish** removes the item from the store. The published version is
+untouched by cancelling.
 
 Only one submission is ever in flight. A rejected *update* never takes down the
 published version, which is why getting 1.0.1 approved untouched mattered.
@@ -66,9 +72,17 @@ chooser, not the grant. Three accounts means three unverified-app warnings.
 
 Full design in **[PAID-PLAN.md](PAID-PLAN.md)**. The essentials:
 
-- **It ships switched OFF.** `gateEnabled` is `false` in both the built-in
-  defaults and the published config. Nobody is charged until you publish a
-  config that says otherwise.
+- **The published config is now switched ON**, as of 27 Jul 2026, so that the
+  store listing and the extension agree during review. This was safe to do
+  before approval because the live 1.0.1 has no licensing code and never
+  requests `raw.githubusercontent.com`, so it cannot read the config at all.
+  Only 1.1.0 installs see it.
+- **The built-in defaults stay `false` and must not change.** `DEFAULTS` in
+  `licensing.js` is what an install falls back to when it cannot reach the
+  config host, and charging someone because a fetch failed is the worst failure
+  this feature could have. Turning the paywall on is an act of publishing.
+- Reversing it is one `publish.ps1` run away, picked up within 24 hours or
+  immediately on browser restart.
 - The rules live in a JSON file on a **static URL, refetched every 24 hours**,
   so the free/paid line changes in minutes rather than needing a store review.
 - **Everything fails open.** Every catch in `licensing.js` unlocks rather than
