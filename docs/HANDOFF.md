@@ -4,18 +4,33 @@
 
 ## Where things stand
 
-The extension **works and is in daily use**.
+The extension **works and is in daily use**. It is now a **git repository**,
+published at
+[github.com/npd1987/file-notes-for-google-drive](https://github.com/npd1987/file-notes-for-google-drive),
+**public**, **AGPL-3.0**.
 
 | Version | State |
 |---|---|
-| **1.0.1** | **Approved and published**, unlisted, on 27 Jul 2026. This is what the store serves. |
-| **1.0.2** | **Submitted, awaiting review.** Adds the toolbar popup, the corrected store summary and description, and removes em dashes from user-visible copy. |
-| **1.0.3** | **Code complete and tested unpacked. No zip built, nothing uploaded.** Multi-account support. Do not upload until 1.0.2 clears — a new package replaces the pending submission and restarts the clock. Build command at the bottom of this file. |
+| **1.0.1** | **Approved and published**, unlisted, 27 Jul 2026. This is what the store currently serves. |
+| **1.0.2** | **Submitted, awaiting review.** Toolbar popup, corrected store copy, em dashes removed. |
+| **1.0.3** | **Never built, never uploaded. Subsumed into 1.1.0** — do not look for it. Its multi-account work is in 1.1.0. |
+| **1.1.0** | **Code complete, tested end to end, zip built and waiting in the project root.** Multi-account support plus the paid gating feature. Do not upload until 1.0.2 clears. |
+
+> **If the dashboard disagrees about what's in review, believe the dashboard.**
+> The evidence here says 1.0.2: this file recorded it as submitted, and the
+> archived zips in `old versions/` stop at 1.0.2 with no 1.0.3 package ever
+> built. Either way 1.1.0 is higher than both, so nothing is blocked.
 
 Only one submission is ever in flight. A rejected *update* never takes down the
 published version, which is why getting 1.0.1 approved untouched mattered.
 
-## What 1.0.3 adds, and why it isn't trivial
+---
+
+## What 1.1.0 adds
+
+Two separate features landed together.
+
+### 1. Multi-account support (was going to be 1.0.3)
 
 The extension used to hold **one** OAuth token. With several Google accounts
 signed into one Chrome profile, that was not merely limited but actively
@@ -47,6 +62,43 @@ neither fallback fires in practice.
 **Consent still appears once per account.** `login_hint` skips the account
 chooser, not the grant. Three accounts means three unverified-app warnings.
 
+### 2. Paid gating — one Google account free, $2 to unlock the rest
+
+Full design in **[PAID-PLAN.md](PAID-PLAN.md)**. The essentials:
+
+- **It ships switched OFF.** `gateEnabled` is `false` in both the built-in
+  defaults and the published config. Nobody is charged until you publish a
+  config that says otherwise.
+- The rules live in a JSON file on a **static URL, refetched every 24 hours**,
+  so the free/paid line changes in minutes rather than needing a store review.
+- **Everything fails open.** Every catch in `licensing.js` unlocks rather than
+  blocks. Someone locked out of their own notes by a slow CDN is far worse than
+  a few dollars of leakage.
+- **Existing users keep what they had.** `recordBaseline()` runs once on update
+  and records how many accounts were already connected; the allowance is
+  `max(freeAccountLimit, baseline)`. Anyone already on three accounts keeps
+  three, permanently.
+- Accounts are counted by **distinct email address**, never slot key, because
+  Chrome renumbers `/u/N/` when accounts are added or removed.
+
+### 3. Orphaned content scripts after an update
+
+When Chrome installs a new version, content scripts in already-open tabs keep
+running but lose their connection; replacements are only injected on page load.
+Alt + right-click in such a tab used to print "Extension context invalidated"
+as raw red error text.
+
+Now the box detects it via `chrome.runtime.id` and offers a **Reload page**
+button. Any typed text stays on screen with a warning *above* the button.
+
+**Re-injecting fresh scripts does not work** and was rejected: the orphaned
+listener registered first and calls `stopImmediatePropagation`, so it swallows
+the click before a new script sees it. The page genuinely has to reload.
+`showStale()` in `src/content/overlay.js` deliberately calls **no `chrome` API**,
+because it has to run when the extension is unreachable.
+
+---
+
 ## Key facts you'll need
 
 | | |
@@ -62,6 +114,11 @@ chooser, not the grant. Three accounts means three unverified-app warnings.
 | Local unpacked ID (path-derived) | `bigmlljgjdgilbfnbdieanchahnaapfpj` |
 | Store visibility | Unlisted |
 | Privacy policy | [published Doc](https://docs.google.com/document/d/e/2PACX-1vTjkq2KG-4igc0t-uQ0Gd7rHHlYofDZFeEOW7xbYCet6Db_R2pk0oxFvHCdJNAOUwl6XoTYdawDdbHO/pub). The editable source doc is in the owner's Drive, titled the same; its ID is deliberately not recorded here because this repo is public. |
+| **GitHub repo** | `npd1987/file-notes-for-google-drive`, public, AGPL-3.0. `main` = source, `config` = the gating file, orphan branch. |
+| **ExtPay permanent ID** | `file-notes-for-google-drive` |
+| **Plan** | USD 2, **Once - Lifetime**, nickname `premium-lifetime` |
+| **Stripe account** | A **dedicated** account, separate from the Buy Me a Coffee tip jar. Live payments approved 27 Jul 2026. |
+| **Config URL** | `https://raw.githubusercontent.com/npd1987/file-notes-for-google-drive/config/gating.json` |
 
 Both redirect URIs are registered in Cloud Console — the store one and the
 local unpacked one — so the dev copy keeps working alongside the published
@@ -71,29 +128,125 @@ version.
 > derived from its path; moving it changes the ID and breaks that copy's
 > OAuth. The store copy is unaffected.
 
+> ⚠️ **Do not register a second extension on ExtensionPay.** The Permanent ID
+> is seeded from the name at first registration and then fixed, so *renaming*
+> is safe. Registering a new entry mints a new ID, and pointing `EXTPAY_ID` at
+> the wrong one makes every existing customer read as unpaid. A stale
+> `files-notes-for-google-drive` entry exists from a typo during setup; delete
+> it or ignore it, but never wire to it.
+
+### Why the Stripe account is separate
+
+Public business details, branding and statement descriptor are **account-level**
+in Stripe, shared by everything on that account. Running the paid extension on
+the tip jar's account meant rebranding one rebranded the other — which happened
+once during setup and was undone. Two accounts under one login is a supported
+setup and needs no separate legal entity.
+
+---
+
+## Changing the paywall after release
+
+```powershell
+.\admin\publish.ps1 -WhatIf     # show the diff, change nothing
+.\admin\publish.ps1             # publish
+```
+
+Edit the values in **`admin/config-editor.html`** (double-click it, no server
+needed), which previews the box as users will see it and exports the JSON.
+
+The config lives **alone on the `config` branch**, an orphan sharing no history
+with `main`. raw.githubusercontent serves whatever that branch holds, live and
+unreviewed, so keeping it off `main` is what stops an ordinary code push from
+changing the paywall for every install.
+
+`gateEnabled: false` is the **kill switch**. If the gate ever misfires, that is
+hours to fix; a store review is days.
+
+> ⚠️ **Stripe takes real money now.** `gateEnabled` is the only thing between
+> free and charging people. Run `-WhatIf` first, every time.
+
+The URL appears in **three** places and all must agree, or the fetch fails
+silently and every install falls back to the built-in defaults:
+
+- `CONFIG_URL` in `src/background/licensing.js`
+- `host_permissions` in `manifest.json` (the host only)
+- `$Repo` / `$RawUrl` in `admin/publish.ps1`
+
+Changing the *file* never needs a release. Changing the *host, repo, branch or
+account* does.
+
+---
+
 ## Immediate next actions
 
-- [ ] **Watch for the 1.0.2 review result.** Dashboard → item → Status. Set to
-      auto-publish on approval.
-- [ ] **Then upload 1.0.3.** Not before — a new package replaces the pending
-      submission.
-- [ ] **Re-paste three listing fields when submitting 1.0.3.** They carry over
+- [ ] **Watch for the review result.** Dashboard → item → Status. Confirm
+      whether it is 1.0.2 or 1.0.3 while you're there.
+- [ ] **Then upload `file-notes-v1.1.0.zip`** from the project root. Not
+      before — a new package replaces the pending submission and restarts the
+      clock. Do **not** cancel the pending review to get ahead; that loses your
+      queue position and can flag the account.
+- [ ] **Expect a slower review than usual.** 1.1.0 adds two host permissions
+      and a content script on a new domain. Honest justification: *the
+      extension fetches a small JSON file describing which features are
+      enabled; no user data is sent and the request carries no identifiers.*
+- [ ] **Re-paste three listing fields when submitting.** They carry over
       between versions untouched, so editing `store/LISTING.md` alone changes
       nothing. Each is flagged in that file:
-      - **Summary** — *not editable in the dashboard.* It is read from the
-        `description` key in `manifest.json`; the dashboard greys it out as
-        "Summary from package". Changing it means editing the manifest and
-        re-uploading.
+      - **Summary** — *not editable in the dashboard.* Read from the
+        `description` key in `manifest.json`.
       - **Detailed description** — editable, paste it.
-      - **`storage` permission justification** — editable, paste it. It now
-        discloses that account addresses are stored.
+      - **`storage` permission justification** — editable, paste it.
+- [ ] **Only after 1.1.0 is live and confirmed working**, flip the paywall with
+      `admin/publish.ps1`.
 - [ ] **Keep one copy enabled at a time.** The store copy and the unpacked copy
       both match `drive.google.com`, which means two content scripts, two
       context-menu handlers and two overlays fighting over one Alt+right-click.
-      Genuinely baffling if you don't expect it.
-- [ ] Once the store version is confirmed working, remove the
-      `bigmlljg…` redirect URI from Cloud Console. **Not yet** — the unpacked
-      copy is still the dev/test target.
+      They run in separate isolated worlds and cannot suppress each other.
+- [ ] Once the store version is confirmed working, remove the `bigmlljg…`
+      redirect URI from Cloud Console. **Not yet** — the unpacked copy is still
+      the dev/test target.
+
+---
+
+## What was verified end to end on 27 Jul 2026
+
+Not unit tests. Actually performed against live services:
+
+- Gate blocks a second account and shows the offer, **before** any Google
+  consent screen rather than after.
+- Grandfathering held in the real extension: three pre-existing accounts,
+  `allowance: 3`.
+- Real Stripe checkout with test card `4242 4242 4242 4242`, invoice recorded
+  as paid.
+- `onPaid` listener fired, `chrome.storage.sync` updated, gate stopped
+  enforcing, options page re-rendered to "Unlocked", the second account opened
+  the normal editor.
+- Remote config genuinely fetched from GitHub by the installed extension
+  (`gatingConfig` present in `chrome.storage.local`, which only happens on a
+  successful fetch).
+- Stripe customer portal works.
+
+**Test mode is automatic.** ExtensionPay enables it because the extension is
+loaded unpacked, and disables it once installed from the store. It is not a
+setting and cannot be turned off.
+
+### Tests
+
+```powershell
+node admin\gate-test.mjs
+```
+
+21 checks against a stubbed `chrome.storage`, no install step. They cover what
+a paying user would notice if it broke: known accounts never blocked, first
+account always free, kill switch, grandfathering, duplicate addresses counted
+once, storage failure fails open, a dead payment processor never revoking
+someone who paid, and — the one that would have shipped a paywall to everyone —
+a cold install with an unreachable config host **not** gating.
+
+Run it after touching `licensing.js`.
+
+---
 
 ## House style for user-visible copy
 
@@ -101,6 +254,12 @@ version.
 page, the popup, error strings. Code comments are exempt. This is a deliberate
 preference, not an accident — em dashes read as machine-written. Use commas,
 colons, parentheses or a second sentence.
+
+Say what is being sold. The upgrade box carries the extension name from
+`chrome.runtime.getManifest()`, not from remote config, because the name of the
+thing being charged for must never be wrong. And "pay once, **not per
+account**" is load-bearing: without it, a one-time price beside a list of
+accounts reads as a price *per* account.
 
 ## If the reviewer questions the scope
 
@@ -111,9 +270,9 @@ version, on Google's own authority: selecting a folder does **not** grant
 right-clicked file would require a Picker dialog per file — slower than
 Drive's own description panel, which defeats the entire purpose.
 
-## Architecture, and why
+---
 
-Two decisions carry the design:
+## Architecture, and why
 
 **The Drive-DOM surface is exactly one selector.** `src/content/resolver.js` is
 the only file that depends on Drive's markup, and it asks for one thing: the
@@ -138,6 +297,21 @@ than breaks. Note it deliberately does **not** search the document for any
 email — Drive is full of other people's addresses in sharing dialogs, and
 hinting one of those would be worse than hinting nothing.
 
+**The payment processor is behind one function.** `refreshLicense()` in
+`licensing.js` is the only code that knows ExtensionPay exists. Everything else
+asks `getPlan()`. Self-hosting later to avoid the 5% means changing what writes
+the license state and nothing else. `checkoutUrl` in remote config already
+overrides where people are sent, so the migration needs no release.
+
+`refreshLicense()` only ever **promotes** to paid, never revokes. A network
+failure and a genuine "not paid" are hard to tell apart from inside a browser,
+and being wrongly locked out is far worse than a refunded $2 that keeps
+working.
+
+**The gate runs before the OAuth window opens**, in `authorize()`. Someone over
+the allowance meets the offer directly instead of being walked through a Google
+sign-in and only then refused.
+
 Also worth remembering: tokens live in `chrome.storage.session`, not a
 service-worker variable. MV3 workers die after ~30s idle, which was silently
 throwing the token away and forcing constant re-auth. Don't "simplify" that
@@ -145,6 +319,41 @@ back into a plain variable, and don't move it to `storage.local` either —
 that would write a live credential to disk. The slot-to-address map *is* in
 `storage.local`, deliberately: it holds no credential and has to survive a
 browser restart to be useful.
+
+`startPaymentListener()` is called at the service worker's **top level**, not
+inside a listener, for the same reason: the worker is torn down and rebuilt
+constantly, and the listener must survive every rebuild.
+
+### The vendored ExtPay is not upstream's module build
+
+`src/vendor/` holds **two copies** of the same library, and
+[src/vendor/README.md](../src/vendor/README.md) explains why. Upstream's
+`dist/ExtPay.module.js` opens with a bare `import 'webextension-polyfill'`,
+which only resolves under a bundler and throws in a browser. This project has
+no build step, so `ExtPay.module.js` here is `dist/ExtPay.js` with
+`export default ExtPay;` appended. The content script entry has to stay the
+classic build, since content scripts are not modules.
+
+**When updating, do not copy `dist/ExtPay.module.js`.** Commands are in that
+README.
+
+---
+
+## Licence
+
+**AGPL-3.0**, and not by preference. ExtPay is AGPLv3 and that carries forward
+to anything distributed with it. Open sourcing costs nothing real here, because
+a Chrome extension ships its source as readable JavaScript regardless — anyone
+can unzip the published package and read exactly the same code.
+
+The `LICENSE` file is included in the store zip so the licence travels with the
+distributed work.
+
+If you ever want this closed source, the options are: email
+glen@extensionpay.com and ask for an exception, or drop the dependency and use
+a Stripe Payment Link through the `checkoutUrl` override.
+
+---
 
 ## Plans, not yet started
 
@@ -163,6 +372,14 @@ browser restart to be useful.
   on the same domain, and the policy is currently a published Google Doc.
 - [UPLOAD-CHECKLIST.md](UPLOAD-CHECKLIST.md) — Chrome Web Store submission.
   Still accurate, and now used for every version update, not just the first.
+- [PAID-PLAN.md](PAID-PLAN.md) — the paid feature, in full. **Done and
+  shipped in 1.1.0**, but read it before changing any of it.
+
+> **Chrome Web Store review and OAuth verification are unrelated systems.**
+> Publishing 1.1.0 does not trigger OAuth verification and Google will not
+> start it on its own. You submit it yourself, in Cloud Console, and only then
+> does Google decide whether CASA applies. The 100-user cap is **lifetime and
+> cumulative**, not concurrent; uninstalls still count.
 
 ## Feature backlog
 
@@ -178,9 +395,9 @@ browser restart to be useful.
    session-storage cache. But `getAuthToken` issues tokens for the account
    signed into the **Chrome profile**, and cannot target a specific Drive
    account slot. Adopting it would trade multi-account support for that
-   simplification. Given 1.0.3 exists specifically to support several accounts
-   in one profile, the trade is now a bad one. Left here so nobody
-   re-discovers the idea without also re-discovering the objection.
+   simplification. Given multi-account is now a *paid* feature, the trade is a
+   very bad one. Left here so nobody re-discovers the idea without also
+   re-discovering the objection.
 
 ## Things already investigated — don't redo these
 
@@ -191,29 +408,90 @@ browser restart to be useful.
 | Can the extension trigger Win+H / OS dictation? | **No.** Synthetic key events never reach the OS; `chrome.commands` can't bind the Windows key. Native messaging is the only route and isn't worth it. |
 | Can Claude read the Web Store dashboard via the Chrome extension? | **No.** Chrome forbids scripting the extensions gallery. Desktop screen capture works instead. |
 | Drive description character limit | **25,000** |
-| Does `about.get` work under the `drive.metadata` scope? | **Yes.** Confirmed against Google's reference 27 Jul 2026. Returns `user.emailAddress`, which is how account discovery works with no extra scope. |
+| Does `about.get` work under the `drive.metadata` scope? | **Yes.** Returns `user.emailAddress`, which is how account discovery works with no extra scope. |
 | Can the store Summary be edited in the dashboard? | **No.** It comes from `manifest.json`'s `description`. Requires a package re-upload. |
 | Can you buy a CASA assessment up front? | **No.** Tier 2 is initiated by Google when it decides your app is in scope. Self-initiated assessments are validated only at Tier 3, the expensive tier. |
 | Is the CASA free self-scan still available? | **No.** Deprecated. An authorized lab must validate. |
+| Can Chrome take in-app payments? | **No.** Chrome Web Store Payments was shut down years ago. An outside processor is mandatory. |
+| What does ExtensionPay cost? | **5% per transaction**, no monthly fee, funds paid into your own Stripe account. Assume Stripe's own fees stack on top. At $2 you keep roughly **$1.54**; the fixed $0.30, not the 5%, is what makes small prices expensive. |
+| Can users be prompted to update the extension? | **No, and they never need to be.** Chrome auto-updates extensions every few hours and on browser start, silently. |
+| Can orphaned content scripts be replaced automatically after an update? | **No.** The orphan registered its listener first and calls `stopImmediatePropagation`, so it swallows the click before any re-injected script sees it. The page must reload. |
+| Does `import()` work in a service worker console? | **No.** Disallowed on `ServiceWorkerGlobalScope`. Send a message from the options page instead. |
+| Does upstream's `ExtPay.module.js` work without a bundler? | **No.** Bare `import 'webextension-polyfill'`. See `src/vendor/README.md`. |
+
+---
 
 ## Build commands
 
-Rebuild the store zip (bump the version in `manifest.json` first — every
-upload needs a higher version):
+Rebuild the store zip. Bump the version in `manifest.json` first — every
+upload needs a higher version than the published one:
 
 ```powershell
 $v = (Get-Content manifest.json -Raw | ConvertFrom-Json).version
-Remove-Item "file-notes-v$v.zip" -ErrorAction SilentlyContinue
-Compress-Archive -Path icons, src, manifest.json -DestinationPath "file-notes-v$v.zip"
+Compress-Archive -Path manifest.json, icons, src, LICENSE -DestinationPath "file-notes-v$v.zip" -Force
 "built file-notes-v$v.zip"
 ```
 
-`manifest.json` must sit at the zip root — never zip the folder itself.
-Naming the three paths explicitly excludes `store/`, `docs/`, `screenshots/`
-and `.claude/` by design.
+`manifest.json` must sit at the zip root — never zip the folder itself. Naming
+the paths explicitly excludes `admin/`, `docs/`, `store/`, `screenshots/`,
+`old versions/` and `.claude/` by design. `LICENSE` is included deliberately,
+for AGPL.
 
-Syntax check everything:
+Verify a built zip before uploading:
 
 ```powershell
-Get-ChildItem -Recurse -Filter *.js | ForEach-Object { node --check $_.FullName }
+Expand-Archive file-notes-v1.1.0.zip -DestinationPath $env:TEMP\zipcheck -Force
+Get-ChildItem $env:TEMP\zipcheck
 ```
+
+`manifest.json` must be at the top level, and `admin/` and `docs/` must not
+appear at all.
+
+Syntax check everything (skip `src/vendor/`, which is third-party and minified
+in places):
+
+```powershell
+Get-ChildItem -Recurse -Filter *.js | Where-Object { $_.FullName -notlike '*\vendor\*' } | ForEach-Object { node --check $_.FullName }
+```
+
+Note the background files are ES modules; `node --check` treats `.js` as
+CommonJS and will report false errors on their `import` lines. Those three are
+covered by `admin\gate-test.mjs` instead.
+
+## File layout
+
+```
+manifest.json              MV3 manifest
+file-notes-v1.1.0.zip      the current upload package (newest lives in root)
+old versions/              superseded zips
+LICENSE                    AGPL-3.0
+src/content/               runs on drive.google.com
+  config.js                settings, modifier matching, account-slot detection
+  resolver.js              ← the only Drive-DOM-dependent file
+  overlay.js               the note box (Shadow DOM): editor, upgrade, stale
+  content.js               event wiring
+src/background/
+  service-worker.js        message router
+  api-backend.js           Drive REST — active
+  ui-backend.js            zero-OAuth alternative — stub
+  licensing.js             remote config, licence, the gate
+src/vendor/                ExtPay, checked in — read its README before updating
+src/options/               settings page
+src/popup/                 toolbar popup
+admin/                     NOT SHIPPED. Paywall control panel and tests.
+  config-editor.html       edit the rules, preview the box, export JSON
+  publish.ps1              push the rules live
+  gating.json              the current rules
+  gate-test.mjs            21 tests
+docs/                      NOT SHIPPED. This file and the plans.
+store/                     NOT SHIPPED. Listing copy and privacy policy.
+```
+
+## Tooling installed on this machine
+
+- **git** 2.55.0
+- **GitHub CLI** 2.96.0, authenticated as `npd1987` (`gh auth status` to check)
+
+Commits use `npd1987 <npd1987@users.noreply.github.com>`, passed per-command
+rather than written to global git config, so a real email stays out of a public
+repo's history.
