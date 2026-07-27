@@ -8,7 +8,23 @@
 
 DriveNotes.loadSettings();
 
+// True while this script can still reach the extension. `chrome.runtime.id`
+// goes undefined the moment the extension updates, disables, or reloads: Chrome
+// leaves the old content script running in the page but severs its connection,
+// and only injects the replacement on the next page load. So an orphaned copy
+// of this file keeps handling clicks it can no longer service.
+const contextAlive = () => Boolean(chrome.runtime?.id);
+
+const staleError = () => {
+  const error = new Error('File Notes was updated. Reload the page to reconnect.');
+  error.code = 'CONTEXT_INVALIDATED';
+  return error;
+};
+
 function send(message) {
+  // Checked up front as well as caught below, because once the context is gone
+  // sendMessage throws synchronously rather than reporting through lastError.
+  if (!contextAlive()) return Promise.reject(staleError());
   return new Promise((resolve, reject) => {
     chrome.runtime.sendMessage(message, (response) => {
       if (chrome.runtime.lastError) {
@@ -25,6 +41,11 @@ function send(message) {
         resolve(response);
       }
     });
+  }).catch((err) => {
+    // "Extension context invalidated" can also surface mid-flight, if the
+    // update lands between the check above and the callback.
+    if (!contextAlive()) throw staleError();
+    throw err;
   });
 }
 
@@ -78,6 +99,13 @@ window.addEventListener(
         // allowance. It gets an offer instead of red text.
         if (err.code === 'ACCOUNT_LIMIT') {
           overlay.showUpgrade(err.upgrade || {}, () => send({ type: 'openCheckout' }));
+          return;
+        }
+        // Nothing is broken here either: this tab is just running a content
+        // script from before the last update. "Extension context invalidated"
+        // means nothing to anyone, so offer the reload instead.
+        if (err.code === 'CONTEXT_INVALIDATED') {
+          overlay.showStale();
           return;
         }
         overlay.setTitle('Drive note');

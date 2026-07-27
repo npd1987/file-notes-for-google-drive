@@ -78,6 +78,25 @@ const OVERLAY_CSS = `
   .upgrade p { margin: 0 0 10px; font-size: 12.5px; opacity: 0.85; }
   .upgrade .unlock { background: #0b57d0; color: #fff; width: 100%; }
   .upgrade .note { font-size: 11px; opacity: 0.6; margin: 8px 0 0; }
+
+  /* Shown when this content script has been orphaned by an extension update.
+     The page has to reload to get a live script, so the box stops pretending
+     it can save and offers the one action that helps. */
+  .stale { display: none; }
+  .box.stale-mode .stale { display: block; }
+  .box.stale-mode .save,
+  .box.stale-mode .hint { display: none; }
+  /* Only when there is nothing typed. If the user has text, the editor stays
+     put so a reload can't quietly eat what they wrote. */
+  .box.stale-empty textarea,
+  .box.stale-empty .status { display: none; }
+  .stale p { margin: 0 0 10px; font-size: 12.5px; opacity: 0.85; }
+  .stale .reload { background: #0b57d0; color: #fff; width: 100%; }
+  /* Warmer than the muted note under the upgrade button: this one is telling
+     you that pressing the button below will discard what you typed. */
+  .stale .warn { font-size: 11.5px; color: #b06000; margin: 0 0 8px; }
+  .stale .warn:empty { display: none; }
+  @media (prefers-color-scheme: dark) { .stale .warn { color: #fdd663; } }
 `;
 
 let host = null;
@@ -105,6 +124,13 @@ function build() {
              payment sitting next to a list of accounts reads as a price per
              account, which is the opposite of what's being offered. -->
         <p class="note">Pay once, not per account. Unlocks unlimited Google accounts.</p>
+      </div>
+      <div class="stale">
+        <p class="body">File Notes updated in the background. This tab is still running the old version, so reload the page to reconnect.</p>
+        <!-- Above the button, not below it. A warning about losing your work is
+             only useful if it is read before the thing that destroys it. -->
+        <p class="warn"></p>
+        <button class="reload" type="button">Reload page</button>
       </div>
       <div class="row">
         <span class="hint">Ctrl+Enter saves · Esc cancels</span>
@@ -146,6 +172,8 @@ DriveNotes.openOverlay = function ({ x, y, title, onSave }) {
   const upgradeBody = shadow.querySelector('.upgrade .body');
   const unlockBtn = shadow.querySelector('.unlock');
   const productEl = shadow.querySelector('.product');
+  const reloadBtn = shadow.querySelector('.reload');
+  const staleWarn = shadow.querySelector('.stale .warn');
 
   titleEl.textContent = title;
   textarea.value = '';
@@ -155,7 +183,7 @@ DriveNotes.openOverlay = function ({ x, y, title, onSave }) {
   saveBtn.disabled = true;
   // The node is reused across opens, so last time's locked state has to be
   // cleared or an unrelated file inherits the paywall.
-  box.classList.remove('locked');
+  box.classList.remove('locked', 'stale-mode', 'stale-empty');
   host.style.display = '';
   position(box, x, y);
 
@@ -204,6 +232,25 @@ DriveNotes.openOverlay = function ({ x, y, title, onSave }) {
       // was placed for the editor's.
       position(box, x, y);
     },
+    // The content script has been orphaned by an update. Nothing it sends can
+    // arrive, so stop offering Save and offer the reload instead.
+    showStale: () => {
+      titleEl.textContent = 'Reconnect needed';
+      productEl.textContent = '';
+      box.classList.add('stale-mode');
+      // Anything already typed is kept on screen and called out, because the
+      // reload will discard it and losing someone's note to a housekeeping
+      // message would be worse than the bug this is fixing.
+      const typed = textarea.value.trim();
+      if (typed) {
+        staleWarn.textContent = 'Copy your note first: reloading will clear it.';
+      } else {
+        box.classList.add('stale-empty');
+        staleWarn.textContent = '';
+      }
+      reloadBtn.onclick = () => location.reload();
+      position(box, x, y);
+    },
     close: () => {
       if (activeHandle !== handle) return;
       host.style.display = 'none';
@@ -220,6 +267,12 @@ DriveNotes.openOverlay = function ({ x, y, title, onSave }) {
       handle.setStatus('Saved', 'ok');
       setTimeout(handle.close, 700);
     } catch (err) {
+      // The save couldn't even leave the page. showStale keeps the typed text
+      // on screen and warns before the reload discards it.
+      if (err.code === 'CONTEXT_INVALIDATED') {
+        handle.showStale();
+        return;
+      }
       handle.setStatus(err.message || String(err), 'error');
       saveBtn.disabled = false;
     }

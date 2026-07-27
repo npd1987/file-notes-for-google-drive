@@ -94,7 +94,7 @@ src/popup/       toolbar popup
 admin/           local control panel for the gating rules (not shipped)
 ```
 
-Three deliberate choices:
+The deliberate choices:
 
 **The DOM surface is one selector.** The content script asks Drive's DOM for
 exactly one thing — the file ID. Everything else (filename, existing
@@ -114,6 +114,16 @@ that index is the only thing distinguishing one tab from another. The content
 script reads it, tokens are cached per slot, and the address each slot
 authorized as is recorded so `login_hint` can name it on later refreshes. See
 [docs/HANDOFF.md](docs/HANDOFF.md) for why this can't be simplified away.
+
+**An update orphans every open tab, and the box says so.** When Chrome installs
+a new version, content scripts already running in open tabs keep running but
+lose their connection to the extension; replacements are only injected on page
+load. The old script still holds the `contextmenu` listener and still calls
+`stopImmediatePropagation`, so re-injecting a fresh copy would not help — the
+orphan swallows the click first. Instead the box detects the dead context via
+`chrome.runtime.id` and offers a Reload button, keeping any typed text on screen
+with a warning first. See `showStale` in
+[`src/content/overlay.js`](src/content/overlay.js).
 
 **The paywall is remote-controlled.** Whether extra Google accounts cost
 anything, how many are free, and what the price says all live in a JSON file on
