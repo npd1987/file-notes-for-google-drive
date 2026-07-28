@@ -1,0 +1,158 @@
+/* Same palette as the extension's popup and options page, so the site and the
+   product look like one thing. Light and dark both, following the visitor's
+   system setting. */
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --fg: #1f1f1f;
+  --muted: #5f6368;
+  --border: #dadce0;
+  --card-bg: #f1f3f4;
+  --chip-bg: #ffffff;
+  --field-border: #c4c7c5;
+  --accent: #0b57d0;
+  --on-accent: #ffffff;
+  --ok: #188038;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1f1f1f;
+    --fg: #e8eaed;
+    --muted: #9aa0a6;
+    --border: #3c4043;
+    --card-bg: #2d2e30;
+    --chip-bg: #1f1f1f;
+    --field-border: #5f6368;
+    --accent: #a8c7fa;
+    --on-accent: #062e6f;
+    --ok: #81c995;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 0 24px 72px;
+  font: 16px/1.65 system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.wrap { max-width: 720px; margin: 0 auto; }
+
+header.site {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 28px 0 8px;
+}
+header.site img { width: 40px; height: 40px; border-radius: 8px; }
+header.site .name { font-size: 17px; font-weight: 600; }
+header.site nav { margin-left: auto; display: flex; gap: 18px; }
+header.site nav a { font-size: 14px; }
+
+h1 {
+  font-size: 34px;
+  line-height: 1.25;
+  font-weight: 600;
+  margin: 28px 0 12px;
+  letter-spacing: -0.01em;
+}
+h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 40px 0 10px;
+}
+h3 { font-size: 16px; font-weight: 600; margin: 26px 0 6px; }
+
+.lede { font-size: 18px; color: var(--muted); margin: 0 0 26px; }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.cta {
+  display: inline-block;
+  padding: 11px 22px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 500;
+}
+.cta:hover { text-decoration: none; opacity: 0.92; }
+.cta-row { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-bottom: 8px; }
+.cta-note { font-size: 14px; color: var(--muted); }
+
+figure { margin: 32px 0; }
+figure img {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  display: block;
+}
+figcaption { font-size: 13px; color: var(--muted); margin-top: 8px; }
+
+kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  background: var(--chip-bg);
+  border: 1px solid var(--field-border);
+  border-radius: 4px;
+  font: inherit;
+  font-size: 0.9em;
+}
+
+ol.steps { padding-left: 20px; }
+ol.steps li { margin: 10px 0; }
+
+ul.plain { padding-left: 20px; }
+ul.plain li { margin: 8px 0; }
+
+.card {
+  background: var(--card-bg);
+  border-radius: 10px;
+  padding: 18px 20px;
+  margin: 22px 0;
+}
+.card p:first-child { margin-top: 0; }
+.card p:last-child { margin-bottom: 0; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 18px 0;
+  font-size: 15px;
+  display: block;
+  overflow-x: auto;
+}
+th, td {
+  text-align: left;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+th { font-weight: 600; }
+
+footer.site {
+  margin-top: 56px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  font-size: 14px;
+  color: var(--muted);
+}
+footer.site a { margin-right: 18px; }
+
+.updated { font-size: 14px; color: var(--muted); margin-top: -14px; }
+
+/* Phones. The headline is the only thing that genuinely needs to come down;
+   everything else is already fluid. */
+@media (max-width: 560px) {
+  body { padding: 0 18px 56px; }
+  h1 { font-size: 27px; margin-top: 22px; }
+  .lede { font-size: 17px; }
+  h2 { font-size: 19px; }
+  header.site nav { gap: 14px; }
+  .cta { display: block; text-align: center; }
+  .cta-row { gap: 12px; }
+}

@@ -134,12 +134,26 @@ TAC Security is the lab Google negotiated a discount with; Tier 2 starts around
 $540. The old **free self-scan tier is deprecated** — no longer a path.
 
 Budget **~$540–1,800/yr**. An earlier draft of this document guessed $0 on the
-grounds that this app has no server. That was too optimistic — see below.
+grounds that this app has no server of its own. That was too optimistic — see
+below.
 
 Also required: a **demo video** of the end-to-end OAuth flow, and roughly
 **6 weeks** of review.
 
-## The "no server" argument — worth making, not worth assuming
+## The "no third-party server holds Google data" argument
+
+> **Reworded for 1.1.0, and the precision matters.** This used to be the "no
+> server" argument. That claim is no longer true as written: the extension now
+> fetches `gating.json` from `raw.githubusercontent.com` and ships a content
+> script for `extensionpay.com`. Both are third-party servers and a reviewer
+> will see them in the manifest.
+>
+> The claim that survives, and the one that actually tracks Google's wording
+> below, is narrower and stronger: **no Google user data reaches any server
+> other than Google's own.** The config fetch is an unauthenticated download
+> that sends nothing. ExtensionPay receives a random install identifier and a
+> paid flag, and never a file name, description, or account address. Make
+> *that* argument, and be ready to show the two hosts and say what each carries.
 
 Two Google pages disagree, and it matters which one a reviewer applies.
 
@@ -163,8 +177,16 @@ is "projects with no restricted scopes." Documented exceptions are personal
 use, dev/testing, internal org use, and domain-wide installs — all about *who
 uses it*, none about architecture.
 
-**Conclusion:** this extension having no server is an argument to raise, not an
-exemption to rely on. Plan for the cost; be pleasantly surprised if not.
+**Conclusion:** no Google user data leaving Google's own servers is an argument
+to raise, not an exemption to rely on. Plan for the cost; be pleasantly
+surprised if not.
+
+Note the developer-facing quote turns on "the ability to access data **from or
+through** a third-party server." Read literally, having any third-party host in
+the manifest invites the question. The answer is that neither host can access
+Google user data, because none is ever sent to either. That is a claim about
+data flow, which is demonstrable, rather than a claim about architecture, which
+1.1.0 no longer supports.
 
 ## A second risk: "narrowest scope"
 

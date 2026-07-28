@@ -2,6 +2,13 @@
 
 **As of 27 July 2026.** Read this first when picking the project back up.
 
+> **Picking up cold?** In one paragraph: 1.1.0 is submitted to the Chrome Web
+> Store and awaiting review, with the paywall switched on in the published
+> config so the listing and the extension agree. 1.1.1 has one fix waiting on
+> `main` and must not be built until 1.1.0 clears. The website in `site/` is
+> finished but unpublished, and OAuth verification is blocked on one thing only:
+> buying a domain. Start at **Immediate next actions**.
+
 ## Where things stand
 
 The extension **works and is in daily use**. It is now a **git repository**,
@@ -252,32 +259,46 @@ account* does.
 
 ## Immediate next actions
 
-- [ ] **Watch for the review result.** Dashboard → item → Status. Confirm
-      whether it is 1.0.2 or 1.0.3 while you're there.
-- [ ] **Then upload `file-notes-v1.1.0.zip`** from the project root. Not
-      before — a new package replaces the pending submission and restarts the
-      clock. Do **not** cancel the pending review to get ahead; that loses your
-      queue position and can flag the account.
-- [ ] **Expect a slower review than usual.** 1.1.0 adds two host permissions
-      and a content script on a new domain. Honest justification: *the
-      extension fetches a small JSON file describing which features are
-      enabled; no user data is sent and the request carries no identifiers.*
-- [ ] **Re-paste three listing fields when submitting.** They carry over
-      between versions untouched, so editing `store/LISTING.md` alone changes
-      nothing. Each is flagged in that file:
-      - **Summary** — *not editable in the dashboard.* Read from the
-        `description` key in `manifest.json`.
-      - **Detailed description** — editable, paste it.
-      - **`storage` permission justification** — editable, paste it.
-- [ ] **Only after 1.1.0 is live and confirmed working**, flip the paywall with
-      `admin/publish.ps1`.
+> Rewritten 27 Jul 2026. The previous version of this list said to wait for
+> 1.0.2 and never to cancel a pending review, and to flip the paywall only
+> after 1.1.0 was live. **Both were reversed deliberately**, with reasons
+> recorded above and below. Do not restore the old advice from git history
+> without reading why it changed.
+
+- [ ] **Wait for the 1.1.0 review result.** Submitted 27 Jul 2026. Nothing else
+      on the dashboard needs touching until it comes back.
+- [ ] **Do not rebuild `file-notes-v1.1.0.zip`.** The copy in the project root
+      is byte-for-byte what was uploaded, and it is the only record of what is
+      under review. `main` is already ahead of it.
+- [ ] **If the reviewer questions `raw.githubusercontent.com`**, the answer is
+      in `store/LISTING.md`: the fetched file is configuration, not code, and
+      `sanitize()` reduces it to six booleans, numbers and display strings
+      before anything uses it. Remote code is answered "No" and that is correct.
+- [ ] **After it is approved**, install the store build, confirm the account
+      picker and the paywall behave, then remove the `bigmlljg…` redirect URI
+      from Cloud Console. Not before; the unpacked copy is still the test target.
+- [ ] **Then ship 1.1.1.** One fix is already on `main` (the Plan box status
+      message). Bump `manifest.json` to 1.1.1, rebuild, upload, submit.
 - [ ] **Keep one copy enabled at a time.** The store copy and the unpacked copy
       both match `drive.google.com`, which means two content scripts, two
       context-menu handlers and two overlays fighting over one Alt+right-click.
       They run in separate isolated worlds and cannot suppress each other.
-- [ ] Once the store version is confirmed working, remove the `bigmlljg…`
-      redirect URI from Cloud Console. **Not yet** — the unpacked copy is still
-      the dev/test target.
+
+### The local unpacked copy is in a reset state
+
+To test the paywall on 27 Jul 2026 its licence was deliberately cleared: the
+`license` key, ExtensionPay's `extensionpay_api_key` and friends, the cached
+`gatingConfig`, and `preGateAccountCount` forced to `0`. So this browser is a
+brand new ExtensionPay user with no purchase history, which is why **"Already
+paid? Restore" correctly reports finding nothing.** That is not a bug.
+
+**Real payment cannot be tested from an unpacked install.** ExtensionPay forces
+test mode whenever the extension is loaded in developer mode, and says so on its
+own checkout page. It switches to live automatically once the extension is
+installed from the store. The whole flow is still testable today with Stripe's
+`4242 4242 4242 4242`. ExtensionPay's own "reset this extension to an unpaid,
+pre-trial state" link on the checkout page is a cleaner reset than clearing
+storage by hand, because it resets their side too.
 
 ---
 
@@ -439,9 +460,42 @@ a Stripe Payment Link through the `checkoutUrl` override.
 - [VERIFICATION-CHECKLIST.md](VERIFICATION-CHECKLIST.md) — the *procedure*,
   written 27 Jul 2026. Two findings change the old calculus: **you cannot
   initiate CASA, Google does**, so submitting for verification tests the
-  no-server argument at no cost; and the real blocker is not money but a
-  **domain**, since Google requires a public homepage with the privacy policy
-  on the same domain, and the policy is currently a published Google Doc.
+  data-flow argument at no cost; and the real blocker is not money but a
+  **domain**. See below, where that blocker is now half solved.
+
+### The website — built, unpublished, waiting on a domain
+
+`site/` holds a finished static site: `index.html` (landing page with a pricing
+section), `privacy.html` (the policy as a real web page), a shared `style.css`
+using the extension's own palette, and copies of the icon and store screenshot.
+Verified responsive at 375px and 1280px with no sideways scroll. No build step,
+no dependencies, no external requests.
+
+**`github.io` will not satisfy Google, and this was checked rather than
+assumed.** Google's brand verification policy states "The home page must exist
+on a verified domain under your ownership," and every domain the project uses
+must be one you own and can verify. A `*.github.io` address can be verified in
+Search Console, which is the trap, but OAuth review treats it as third-party
+hosting and rejects it. Same for Notion and Webflow.
+
+So the remaining blocker is **a registered domain, roughly $12/year**, and
+nothing else. Hosting stays free: point the domain at GitHub Pages, which
+supports custom domains and automatic HTTPS on public repos at no cost. Once a
+domain exists:
+
+1. Put `site/` on a `gh-pages` branch, or move it to `/docs` and switch Pages to
+   that folder. It is not currently published anywhere.
+2. Add a `CNAME` file containing the domain.
+3. Two DNS records at the registrar, then enable HTTPS in the repo's Pages
+   settings.
+4. Verify the domain in Search Console **under the same Google account as the
+   Cloud project**, then set it as the homepage and privacy policy URL on the
+   OAuth consent screen.
+
+The published Google Doc privacy policy stays valid for the Chrome Web Store
+listing either way. It is only OAuth verification that demands the policy sit on
+a domain you own, which is what `site/privacy.html` is for. Keep the two in step;
+`store/PRIVACY-POLICY.md` is the source both are generated from.
 - [UPLOAD-CHECKLIST.md](UPLOAD-CHECKLIST.md) — Chrome Web Store submission.
   Still accurate, and now used for every version update, not just the first.
 - [PAID-PLAN.md](PAID-PLAN.md) — the paid feature, in full. **Done and
@@ -557,7 +611,14 @@ admin/                     NOT SHIPPED. Paywall control panel and tests.
   gate-test.mjs            21 tests
 docs/                      NOT SHIPPED. This file and the plans.
 store/                     NOT SHIPPED. Listing copy and privacy policy.
+site/                      NOT SHIPPED in the zip. The public website, for
+                           OAuth verification. Not published yet; needs a
+                           domain. index.html, privacy.html, style.css.
 ```
+
+**Only four things go in the zip:** `icons/`, `src/`, `manifest.json` and
+`LICENSE`. Everything else is working material. A change under `docs/`, `store/`,
+`admin/` or `site/` never requires a rebuild or a re-upload.
 
 ## Tooling installed on this machine
 
